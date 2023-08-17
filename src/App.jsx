@@ -2,14 +2,18 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import Map, { Source, Layer, Marker, Popup } from 'react-map-gl';
 import Population from './data/province_pop';
 import Legend from './data/Legend';
-import { useState, useEffect, u } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Animation from './components/Animation';
 // import Direction from './ClusterMap/Direction';
 import CenteriodData from './data/centriod_data';
 import marker1 from "./Asset/images/marker.png"
 import HeatMap from './project/Heatmap/heatmap';
-// import Mapbox from './Mapbox';
+import {Pakdatalayer1,pakdataLayer,centeriodLayer} from "./components/Layers"
+import Clustermap from './project/Clustermap/cluster';
+  import { clusterLayer, clusterCountLayer, unclusteredPointLayer } from './project/Clustermap/clusterLayer1';
+
 function App() {
+  const mapRef = useRef(null);
   const [viewport, setViewPort] = useState({
       longitude: 73.0479,
       latitude: 33.6844,
@@ -21,42 +25,7 @@ function App() {
   const [selectedcoord, setSelectedCoord] = useState(null);
   const [basemap, setBaseMap] = useState('mapbox://styles/mapbox/streets-v9')
 
-  const pakdatalayer = {
-    id: 'Pak-Admin',
-    type: 'fill',
-    source: 'mapbox',
 
-    paint: {
-      'fill-color': mapColor,
-      'fill-opacity': 0.5,
-
-    }
-  };
-
-  const pakdataLayer = {
-    id: 'outline',
-    type: 'line',
-    source: 'Pak-Admin',
-    layout: {},
-    paint: {
-      'line-color': '#000',
-      'line-width': 3
-    }
-  };
-
-  const centeriodLayer = {
-    id: "center-pk-layer",
-    type: "circle",
-    paint: {
-      'circle-color': 'blue',
-      'circle-radius': 6,
-      'circle-opacity': 0.8,
-    }
-  };
-  // const islamabadCoords = {
-  //   longitude: 73.0479,
-  //   latitude: 33.6844
-  // };
   const changeMapStyle = (newStyle) => {
     setBaseMap(newStyle);
   };
@@ -67,6 +36,8 @@ function App() {
     }
   }, [selectedcoord])
 
+  const [isClusture,setIsCluster]=useState(false);
+
   return (
     <>
       <h1>{title}</h1>
@@ -74,12 +45,17 @@ function App() {
         selectedcoord &&
         <p>Selected coord: {selectedcoord.geometry.coordinates}</p>
       }
+      <div style={{ display:'flex', justifyItems:'center', paddingBottom:10}}>
       <button onClick={() => changeMapStyle('mapbox://styles/mapbox/dark-v11')}>
-        Change to dark View
+        Heat Map
       </button>
       <button onClick={() => changeMapStyle('mapbox://styles/mapbox/streets-v11')}>
-        Change to Streets View
+        Custom Map
       </button>
+      <button onClick={() => changeMapStyle('mapbox://styles/mapbox/light-v11')}>
+        Cluster Map
+      </button>
+      </div>
       <Map
       // {...viewport}
     
@@ -93,17 +69,25 @@ function App() {
         
         style={{ width: '100vw', height: '100vh' }}
       mapStyle={basemap}
+      interactiveLayerIds={[clusterLayer.id]}
+      onClick={ ()=>
+      {
+        setIsCluster(true)
+      }}
+      ref={mapRef}
 
       >
-  
 
-        {/* <AttributionControl customAttribution="Map design by me" /> */}
 
         <Source id="Pak-Admin" type="geojson" data={Population}>
-          <Layer {...pakdatalayer} />
-          <Layer {...pakdataLayer} />
+          <Layer {...Pakdatalayer1(mapColor)} />
 
         </Source>
+
+        <Source id="Pak-Admin" type="geojson" data={Population}>
+          <Layer {...pakdataLayer} />
+        </Source>
+
         <Source id="center-pk-layer" type="geojson" data={CenteriodData}>
 
           <Layer {...centeriodLayer} />
@@ -111,11 +95,6 @@ function App() {
         </Source>
 
         <Legend setLegendColor={setMapColor} setTitle={setTitle} />
-
-        {/* Marker for Islamabad */}
-        {/* <Marker longitude={islamabadCoords.longitude} latitude={islamabadCoords.latitude}>
-          <div style={{ color: 'red' }}>📍</div>
-        </Marker> */}
 
         {CenteriodData.features.map((centriode) => (
           <Marker
@@ -132,12 +111,6 @@ function App() {
         ))}
 
         {selectedcoord && selectedcoord.geometry &&
-          // <Popup
-          // longitude={selectedcoord.geometry.coordinates[0]}
-          // latitude={selectedcoord.geometry.coordinates[1]}
-          // >
-          //  Test
-          // </Popup>
           <Popup
             longitude={selectedcoord.geometry.coordinates[0]}
             latitude={selectedcoord.geometry.coordinates[1]}
@@ -153,10 +126,15 @@ function App() {
       {
         basemap === 'mapbox://styles/mapbox/dark-v11' && <HeatMap/>
       }
-      
+      {
+        basemap === 'mapbox://styles/mapbox/light-v11' && <Clustermap 
+        isClusture={isClusture} setIsCluster={setIsCluster}
+        />
+      }
+
       </Map>
       <Animation setMapColor={setMapColor} />
-      {/* <Direction /> */}
+
       
     </>
   );
